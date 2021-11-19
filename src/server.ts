@@ -15,7 +15,7 @@ app.set( "views", path.join( __dirname, "views" ) );
 app.set( "view engine", "ejs" );
 
 // Define a route handler for the default home page
-app.get( "/", ( req, res ) => {
+app.get( "/", async ( req, res ) => {
     // render the index template
     res.render( "index" );
 } );
@@ -28,4 +28,6 @@ app.listen( port, () => {
     console.log( `server started at http://localhost:${ port }` );
 } );
 
-// const nc = new NotionClient("TOKEN");
+const nc = new NotionClient(db, env.NOTION_TOKEN);
+nc.getDatabases().then((databases) => {console.log(databases)});
+nc.getPages().then((pages) => {console.log(pages)});
