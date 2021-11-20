@@ -112,6 +112,16 @@ class NotionClient {
             return await this.convertToNotionObject(page);
         }));
     }
+
+    async getObjects() {
+        const databases = await this.getDatabases();
+        const pages = await this.getPages();
+        
+        return {
+            databases: databases,
+            pages: pages
+        }
+    }
 }
 
 export default NotionClient;

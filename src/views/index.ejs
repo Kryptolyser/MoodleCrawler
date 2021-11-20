@@ -3,15 +3,126 @@
 <head>
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>Guitar Inventory</title>
+    <title>Moodle Crawler</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Compiled and minified CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+    <!-- Compiled and minified JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    <!-- JQuery -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <!-- Google Fonts -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
 </head>
 <body>
     <div class="container">
-        <h1 class="header">Guitar Inventory</h1>
-        <a class="btn" href="/guitars"><i class="material-icons right">arrow_forward</i>Get started!</a>
+        <h1>Moodle Crawler</h1>
+
+        <h3>1. Notion Token</h3>
+        <div id="notion_token_field" class="input-field">
+            <input id="notion_token" type="text" class="validate">
+            <label for="notion_token">Internal Integration Token</label>
+
+            <button id="notion_token_btn" class="waves-effect waves-light btn" onclick="checkToken();">Check</button>
+        </div>
+            
+        <a href="https://www.notion.so/my-integrations/internal/" target="blank">Notion Developer Site</a>
+
+        <div id="notion_objects" class="col s12">
+            <h3>2. Notion Settings</h3>
+            <div class="row">
+                <div id="notion_databases" class="input-field col s6">
+                    <select id="notion_database_select">
+                        <option value="" disabled selected>Choose your database</option>
+                    </select>
+                    <label>Notion Database</label>
+                </div>
+
+                <div id="notion_pages" class="input-field col s6">
+                    <select id="notion_pages_select">
+                        <option value="" disabled selected>Choose your page</option>
+                    </select>
+                    <label>Notion Page</label>
+                </div>
+            </div>
+        </div>
     </div>
+
+    <script>
+        $(document).ready(function() {
+            M.AutoInit();
+        });
+
+        function escapeHtml(str) {
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        function checkToken() {
+            $('#notion_token_field').find("input, button").attr("disabled", true);
+            $('#notion_token_btn').html("Checking...");
+
+            //Reset selects
+            M.FormSelect.getInstance(document.getElementById('notion_database_select')).destroy();
+            $('#notion_database_select').empty();
+            M.FormSelect.getInstance(document.getElementById('notion_pages_select')).destroy();
+            $('#notion_pages_select').empty();
+
+
+            var token = $('#notion_token').val();
+            $.ajax({
+                url: 'api/notion/check',
+                type: 'POST',
+                data: {
+                    token: token
+                },
+                success: (data) => {
+                    if (data.check) {
+                        console.log(data.objects);
+                        loadNotionObjects(data.objects);
+                    }
+                    else
+                        alert('Token is invalid');
+                },
+                error: (data) => {
+                    alert('There was an unexpected error.');
+                },
+                complete: () => {
+                    $('#notion_token_field').find("input, button").removeAttr("disabled");
+                    $('#notion_token_btn').html("Check");
+                }
+            });
+        }
+
+        function buildPath(object) {
+            if (object.parent)
+                return buildPath(object.parent) + '/' + object.title;
+            return object.title;
+        }
+
+        function loadNotionObjects(objects) {
+            let notion_dbs = $('#notion_database_select');
+            notion_dbs.append('<option value="" disabled selected>Choose your database</option>');
+            let notion_pages = $('#notion_pages_select');
+            notion_pages.append('<option value="" disabled selected>Choose your page</option>');
+
+            objects.databases.concat(objects.pages).map((db) => {
+                return { 
+                    title: escapeHtml(buildPath(db)),
+                    id: db.id,
+                    type: db.type
+                }
+            }).sort((db1, db2) => {
+                return db1.title.localeCompare(db2.title);
+            }).forEach((db) => {
+                if (db.type === "page")
+                    notion_pages.append(`<option id="${db.id}">${db.title}</option>`);
+                else
+                    notion_dbs.append(`<option id="${db.id}">${db.title}</option>`);
+            });
+
+            M.FormSelect.init(document.getElementById('notion_database_select'), {});
+            M.FormSelect.init(document.getElementById('notion_pages_select'), {});
+        }
+    </script>
 </body>
 </html>
