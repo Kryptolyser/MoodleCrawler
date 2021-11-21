@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>Moodle Crawler</title>
+    <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <!-- Compiled and minified CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
@@ -13,78 +14,144 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <!-- Google Fonts -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <!-- Luxon -->
+    <script src="https://moment.github.io/luxon/global/luxon.min.js"></script>
 </head>
 <body>
     <div class="container">
         <h1>Moodle Crawler</h1>
 
-        <h3>1. Notion Token</h3>
+        <h3>1. Access Tokens</h3>
         <div id="notion_token_field" class="input-field">
-            <input id="notion_token" type="text" class="validate">
-            <label for="notion_token">Internal Integration Token</label>
-
-            <button id="notion_token_btn" class="waves-effect waves-light btn" onclick="checkToken();">Check</button>
-        </div>
-            
-        <a href="https://www.notion.so/my-integrations/internal/" target="blank">Notion Developer Site</a>
-
-        <div id="notion_objects" class="col s12">
-            <h3>2. Notion Settings</h3>
-            <div class="row">
-                <div id="notion_databases" class="input-field col s6">
-                    <select id="notion_database_select">
-                        <option value="" disabled selected>Choose your database</option>
-                    </select>
-                    <label>Notion Database</label>
+            <div class="row col s12">
+                <div class="col s6 input-field">
+                    <input id="notion_token" type="text" class="validate" placeholder="secret_asd2381SDF23a2tz8dykdeF1dfF21198ssAWeecD883">
+                    <label for="notion_token">Notion Internal Integration Token</label>
+                    <a href="https://www.notion.so/my-integrations/internal/" target="blank">Notion Developer Site</a>
                 </div>
-
-                <div id="notion_pages" class="input-field col s6">
-                    <select id="notion_pages_select">
-                        <option value="" disabled selected>Choose your page</option>
-                    </select>
-                    <label>Notion Page</label>
+                <div class="col s6 input-field">
+                    <input id="moodle_calendar_url" type="text" class="validate" placeholder="https://moodle.hpi.de/calendar/export_execute.php?userid=12345&authtoken=adj81z4tuht29o87w2ow3rgajkn&preset_what=user&preset_time=custom">
+                    <label for="moodle_calendar_url">Moodle Calendar URL</label>
+                    <a href="https://moodle.hpi.de/calendar/export.php?" target="blank">HPI Moodle</a>
                 </div>
             </div>
+            <button id="notion_token_btn" class="waves-effect waves-light btn" onclick="checkToken();">Check</button>
+        </div>
+
+        <h4 id="error" style="display: none;" class="card-panel red darken-2 white-text center">Your notion token seems invalid!</h4>
+
+        <div id="settings" style="display: none;">
+            <h4 class="card-panel teal white-text center">Your notion token looks alright!</h4>
+
+            <div id="notion_objects" class="col s12">
+                <h3>2. Notion Settings</h3>
+                <div class="row" style="margin-bottom: 0;">
+                    <div id="notion_databases" class="input-field col s6">
+                        <select id="notion_database_select">
+                            <option value="" disabled selected>Choose your database</option>
+                        </select>
+                        <label>Notion Database</label>
+                    </div>
+
+                    <div id="notion_pages" class="input-field col s6">
+                        <select id="notion_page_select">
+                            <option value="" disabled selected>Choose your page</option>
+                        </select>
+                        <label>Notion Page</label>
+                    </div>
+                </div>
+                <div class="row">
+                    <a id="notion_database_url" target="blank" class="col s6"></a>
+                    <a id="notion_page_url" target="blank" class="col s6"></a>
+                </div>
+            </div>
+
+            <div id="moodle_calendar">
+                <h3>3. Moodle Calendar</h3>
+                <ul id="moodle_cal" class="collection" style="max-height: 400px; overflow: auto;"></ul>
+            </div>
+
+            <button id="submit" class="waves-effect waves-light btn" onclick="checkToken();">Submit</button>
         </div>
     </div>
 
     <script>
+        var DateTime = luxon.DateTime;
+        luxon.Settings.defaultLocale = "de";
+
         $(document).ready(function() {
             M.AutoInit();
+        });
+
+        $("#notion_database_select").on('change', function(e) {
+            const url = notionObjects.find((object) => {
+                return object.id == e.target.value;
+            }).url;
+
+            $("#notion_database_url").attr('href', url);
+            $("#notion_database_url").text(url);
+            checkSubmitReady();
+        });
+
+        $("#notion_page_select").on('change', function(e) {
+            const url = notionObjects.find((object) => {
+                return object.id == e.target.value;
+            }).url;
+
+            $("#notion_page_url").attr('href', url);
+            $("#notion_page_url").text(url);
+            checkSubmitReady();
         });
 
         function escapeHtml(str) {
             return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
 
+        let notionObjects;
         function checkToken() {
             $('#notion_token_field').find("input, button").attr("disabled", true);
             $('#notion_token_btn').html("Checking...");
 
             //Reset selects
-            M.FormSelect.getInstance(document.getElementById('notion_database_select')).destroy();
-            $('#notion_database_select').empty();
-            M.FormSelect.getInstance(document.getElementById('notion_pages_select')).destroy();
-            $('#notion_pages_select').empty();
+            try {
+                M.FormSelect.getInstance(document.getElementById('notion_database_select')).destroy();
+                $('#notion_database_select').empty();
+                M.FormSelect.getInstance(document.getElementById('notion_page_select')).destroy();
+                $('#notion_page_select').empty();
+            } catch {}
 
+            $('#settings').css("display", "none");
+            $('#error').css("display", "none");
+            $('#submit').attr("disabled", true);
 
-            var token = $('#notion_token').val();
             $.ajax({
                 url: 'api/notion/check',
                 type: 'POST',
                 data: {
-                    token: token
+                    notion: $('#notion_token').val(),
+                    moodle: $('#moodle_calendar_url').val()
                 },
                 success: (data) => {
                     if (data.check) {
-                        console.log(data.objects);
-                        loadNotionObjects(data.objects);
+                        try {
+                            notionObjects = data.objects;
+                            loadNotionObjects();
+                            loadMoodleCalendar(data.events);
+                            $('#settings').css("display", "block");
+                        } catch (e) {
+                            console.log(e);
+                            $('#error').text("There was an unexpected error!");
+                            $('#error').css("display", "block");
+                        }
                     }
-                    else
-                        alert('Token is invalid');
+                    else {
+                        $('#error').text("Your notion token seems invalid!");
+                        $('#error').css("display", "block");
+                    }
                 },
                 error: (data) => {
-                    alert('There was an unexpected error.');
+                    $('#error').text("There was an unexpected error!");
+                    $('#error').css("display", "block");
                 },
                 complete: () => {
                     $('#notion_token_field').find("input, button").removeAttr("disabled");
@@ -99,13 +166,13 @@
             return object.title;
         }
 
-        function loadNotionObjects(objects) {
+        function loadNotionObjects() {
             let notion_dbs = $('#notion_database_select');
             notion_dbs.append('<option value="" disabled selected>Choose your database</option>');
-            let notion_pages = $('#notion_pages_select');
+            let notion_pages = $('#notion_page_select');
             notion_pages.append('<option value="" disabled selected>Choose your page</option>');
 
-            objects.databases.concat(objects.pages).map((db) => {
+            notionObjects.map((db) => {
                 return { 
                     title: escapeHtml(buildPath(db)),
                     id: db.id,
@@ -115,13 +182,51 @@
                 return db1.title.localeCompare(db2.title);
             }).forEach((db) => {
                 if (db.type === "page")
-                    notion_pages.append(`<option id="${db.id}">${db.title}</option>`);
+                    notion_pages.append(`<option value="${db.id}">${db.title}</option>`);
                 else
-                    notion_dbs.append(`<option id="${db.id}">${db.title}</option>`);
+                    notion_dbs.append(`<option value="${db.id}">${db.title}</option>`);
             });
 
-            M.FormSelect.init(document.getElementById('notion_database_select'), {});
-            M.FormSelect.init(document.getElementById('notion_pages_select'), {});
+            M.FormSelect.init(document.getElementById('notion_database_select'), {closeOnClick: true});
+            M.FormSelect.init(document.getElementById('notion_page_select'), {closeOnClick: true});
+            $("#notion_database_url").text("");
+            $("#notion_page_url").text("");
+        }
+
+        function loadMoodleCalendar(events) {
+            $('#moodle_cal').empty();
+            if (!events || events.length === 0) {
+                $('#moodle_cal').append(
+                    '<li class="collection-item red white-text">No events found!<br>Please check the Moodle Calendar URL!</li>');
+                return;
+            }
+
+            events.sort((e1, e2) => {
+                const timeCompare = DateTime.fromISO(e1.end).valueOf() - DateTime.fromISO(e2.end).valueOf();
+                if (timeCompare === 0)
+                    return e1.summary.localeCompare(e2.summary);
+                return timeCompare;
+            }).forEach((event) => {
+                $('#moodle_cal').append(`
+                    <li class="collection-item">
+                        <div>
+                            <span style="text-decoration: underline">${event.summary}</span>
+                            <span class="grey-text">${event.categories.join(",")}</span>
+                            <p>${event.description}</p>
+                            <p>${DateTime.fromISO(event.end).toLocaleString(DateTime.DATETIME_SHORT)}</p>
+                        </div>
+                    </li>
+                `);
+            });
+        }
+
+        function checkSubmitReady() {
+            if ($("#notion_database_select").val() && $("#notion_page_select").val()) {
+                console.log("REmoved");
+                $("#submit").removeAttr("disabled");
+            } else {
+                $("#submit").attr("disabled", true);
+            }
         }
     </script>
 </body>

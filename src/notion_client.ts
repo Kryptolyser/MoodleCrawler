@@ -1,5 +1,5 @@
 import { Client, APIErrorCode }from "@notionhq/client";
-import { getPage, SearchResponse } from "@notionhq/client/build/src/api-endpoints";
+import { SearchResponse } from "@notionhq/client/build/src/api-endpoints";
 import Database from "./database";
 
 interface NotionObject {
@@ -9,6 +9,8 @@ interface NotionObject {
     url: string;
     parent: NotionObject;
 }
+
+type NotionObjectPlain = SearchResponse["results"][0];
 
 class NotionClient {
     db: Database;
@@ -30,11 +32,14 @@ class NotionClient {
         }
     }
 
-    async convertToNotionObject(object: any): Promise<NotionObject> {
+    convertToNotionObject(object: NotionObjectPlain, list: NotionObjectPlain[]): NotionObject {
+        if (!object)
+            return null;
+
         let title: string;
         switch(object.object) {
             case "page":
-                title = object.properties &&
+                title = object.properties && object.properties.title &&
                     object.properties.title.type === "title" &&
                     object.properties.title.title.length > 0 ?
                     object.properties.title.title[0].plain_text : null
@@ -42,34 +47,23 @@ class NotionClient {
             case "database":
                 title = object.title.length > 0 ? object.title[0].plain_text : null;
                 break;
-            default:
-                title = object.title;
         }
 
         let parent: NotionObject;
-        if (object.parent) {
-            switch(object.parent.type) {
-                case "page_id":
-                    parent = await this.convertToNotionObject(await this.getPage(object.parent.page_id));
-                    break;
-                case "page":
-                    parent = await this.convertToNotionObject(await this.getPage(object.parent.id));
-                    break;
-                case "database_id":
-                    parent = await this.convertToNotionObject(await this.getDatabase(object.parent.database_id));
-                    break;
-                case "database":
-                    parent = await this.convertToNotionObject(await this.getDatabase(object.parent.id));
-                    break;
-                case "workspace":
-                    break;
-                default:
-                    console.log(object);
-            }
+        let parentId: string;
+        switch(object.parent.type) {
+            case "page_id":
+                parentId = object.parent.page_id;
+                break;
+            case "database_id":
+                parentId = object.parent.database_id;
         }
+        parent = this.convertToNotionObject(list.find((item) => {
+            return item.id === parentId;
+        }), list);
 
         return {
-            type: object.object ? object.object : object.type,
+            type: object.object,
             id: object.id,
             title,
             url: object.url,
@@ -77,50 +71,25 @@ class NotionClient {
         }
     }
 
-    async getPage(id: string): Promise<NotionObject> {
-        const page = await this.notion.pages.retrieve({page_id: id});
-        return await this.convertToNotionObject(page);
-    }
+    async getObjects(): Promise<NotionObject[]> {
+        let objects: NotionObjectPlain[] = [];
+        let hasMore = true;
+        let nextCursor;
 
-    async getDatabase(id: string): Promise<NotionObject> {
-        const database = await this.notion.databases.retrieve({database_id: id});
-        return await this.convertToNotionObject(database);
-    }
-
-    async getDatabases(): Promise<NotionObject[]> {
-        const databases = await this.notion.search({
-            filter: {value: "database", property: "object"}
-        });
-
-        return await Promise.all(databases.results.filter((database) => {
-            return database.object === "database";
-        }).map(async (database): Promise<NotionObject> => {
-            return await this.convertToNotionObject(database);
-        }));
-    }
-
-    async getPages(): Promise<NotionObject[]> {
-        const pages = await this.notion.search({
-            filter: {value: "page", property: "object"}
-        });
-
-        return await Promise.all(pages.results.filter((page) => {
-            return page.object === "page" &&
-                !page.archived &&
-                page.properties.title;
-        }).map(async (page): Promise<NotionObject> => {
-            return await this.convertToNotionObject(page);
-        }));
-    }
-
-    async getObjects() {
-        const databases = await this.getDatabases();
-        const pages = await this.getPages();
-        
-        return {
-            databases: databases,
-            pages: pages
+        while (hasMore) {
+            const response: SearchResponse = await this.notion.search({
+                page_size: 100,
+                start_cursor: nextCursor,
+            });
+            hasMore = response.has_more;
+            nextCursor = response.next_cursor;
+            objects = objects.concat(response.results);
         }
+
+        // Convert to NotionObject
+        return objects.map((object): NotionObject => {
+            return this.convertToNotionObject(object, objects);
+        });
     }
 }
 
