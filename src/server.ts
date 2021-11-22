@@ -3,8 +3,9 @@ import favicon from "serve-favicon";
 import path from "path";
 import bodyParser from "body-parser";
 import ical from "node-ical";
+import TelegramBot from "node-telegram-bot-api";
 import NotionClient from "./notion_client";
-import MoodleHelper from "./moodle_helper";
+import { MoodleHelper } from "./helpers";
 import Database from "./database";
 
 // Load environment variables from .env file
@@ -72,3 +73,11 @@ const nc = new NotionClient(db, env.NOTION_TOKEN);
 // nc.getObjects().then(console.log);
 // nc.getDatabases().then((databases) => {console.log(databases)});
 // nc.getPages().then((pages) => {console.log(pages)});
+const bot = new TelegramBot(env.TELEGRAM_TOKEN, {polling: true});
+bot.onText(/^\/start/, (msg) => {
+    //TODO: lookup chatid in database
+    bot.sendMessage(
+        msg.chat.id, 
+        `Hello there ${msg.from.first_name}!\nPlease send me your <b>notion token</b> so I can link this channel.`, 
+        {parse_mode: "HTML"});
+});

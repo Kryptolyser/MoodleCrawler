@@ -1,28 +1,24 @@
-import * as sqlite from 'sqlite3';
-const sqlite3 = sqlite.verbose();
+import sqlite from 'better-sqlite3';
 
 class Database {
     db: sqlite.Database;
 
     constructor() {
-        this.db = new sqlite3.Database('database.db', (err: Error) => {
-            if (err)
-                return console.error(err.stack);
-            console.info('Connected to the SQlite database.');
-
-            this.initialize();
-        });
+        this.db = new sqlite('database.db');
+        this.initialize();
     }
 
     initialize() {
-        this.db.run(`
-            CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, calendar_url TEXT)`,
-            (err: Error) => {
-                if (err)
-                    return console.error(err.stack);
-                console.info('Database initialized.');
-            }
-        );
+        const statements = [
+            'CREATE TABLE IF NOT EXISTS users (notion_token TEXT PRIMARY KEY, notion_database TEXT, notion_page TEXT, calendar_url TEXT, notification_url TEXT);',
+            'CREATE TABLE IF NOT EXISTS events (user_notion_token TEXT, event_id TEXT, PRIMARY KEY(user_notion_token, event_id))'
+        ].map(sql => this.db.prepare(sql));
+
+        this.db.transaction(() => {
+            statements.forEach(statement => statement.run());
+        })();
+
+        console.log('Database initialized');
     }
 
 

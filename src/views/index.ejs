@@ -23,19 +23,23 @@
 
         <h3>1. Access Tokens</h3>
         <div id="notion_token_field" class="input-field">
-            <div class="row col s12">
-                <div class="col s6 input-field">
+            <div class="row col s12 l12">
+                <div class="col m12 l6 input-field">
                     <input id="notion_token" type="text" class="validate" placeholder="secret_asd2381SDF23a2tz8dykdeF1dfF21198ssAWeecD883">
                     <label for="notion_token">Notion Internal Integration Token</label>
                     <a href="https://www.notion.so/my-integrations/internal/" target="blank">Notion Developer Site</a>
                 </div>
-                <div class="col s6 input-field">
+                <div class="col m12 l6 input-field">
                     <input id="moodle_calendar_url" type="text" class="validate" placeholder="https://moodle.hpi.de/calendar/export_execute.php?userid=12345&authtoken=adj81z4tuht29o87w2ow3rgajkn&preset_what=user&preset_time=custom">
                     <label for="moodle_calendar_url">Moodle Calendar URL</label>
                     <a href="https://moodle.hpi.de/calendar/export.php?" target="blank">HPI Moodle</a>
                 </div>
             </div>
-            <button id="notion_token_btn" class="waves-effect waves-light btn" onclick="checkToken();">Check</button>
+            <div class="row">
+                <div class="col s12">
+                    <button id="notion_token_btn" class="waves-effect waves-light btn" onclick="checkToken();">Check</button>
+                </div>
+            </div>
         </div>
 
         <h4 id="error" style="display: none;" class="card-panel red darken-2 white-text center">Your notion token seems invalid!</h4>
@@ -46,14 +50,14 @@
             <div id="notion_objects" class="col s12">
                 <h3>2. Notion Settings</h3>
                 <div class="row" style="margin-bottom: 0;">
-                    <div id="notion_databases" class="input-field col s6">
+                    <div id="notion_databases" class="input-field col m12 l6">
                         <select id="notion_database_select">
                             <option value="" disabled selected>Choose your database</option>
                         </select>
                         <label>Notion Database</label>
                     </div>
 
-                    <div id="notion_pages" class="input-field col s6">
+                    <div id="notion_pages" class="input-field col m12 l6">
                         <select id="notion_page_select">
                             <option value="" disabled selected>Choose your page</option>
                         </select>
@@ -71,6 +75,7 @@
                 <ul id="moodle_cal" class="collection" style="max-height: 400px; overflow: auto;"></ul>
             </div>
 
+            <h3>4. Submit</h3>
             <button id="submit" class="waves-effect waves-light btn" onclick="checkToken();">Submit</button>
         </div>
     </div>

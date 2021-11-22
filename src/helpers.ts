@@ -1,4 +1,6 @@
 import ical from "node-ical";
+import https from "https";
+import { makeConsoleLogger } from "@notionhq/client/build/src/logging";
 
 interface MoodleEvent {
     id: string;
@@ -9,7 +11,7 @@ interface MoodleEvent {
     end: Date;
 }
 
-class MoodleHelper {
+export class MoodleHelper {
     static convertCalendar(events: ical.CalendarResponse): MoodleEvent[] {
         const result: MoodleEvent[] = [];
 
@@ -38,5 +40,3 @@ class MoodleHelper {
         return result;
     }
 }
-
-export default MoodleHelper;
