@@ -3,10 +3,10 @@ import favicon from "serve-favicon";
 import path from "path";
 import bodyParser from "body-parser";
 import ical from "node-ical";
-import TelegramBot from "node-telegram-bot-api";
-import NotionClient from "./notion_client";
-import { MoodleHelper } from "./helpers";
-import Database from "./database";
+import NotionCtrl from "./controller/notion";
+import TelegramCtrl from "./controller/telegram";
+import MoodleCtrl from "./controller/moodle";
+import DatabaseCtrl from "./controller/database";
 
 // Load environment variables from .env file
 const env = require('dotenv').config().parsed;
@@ -36,48 +36,48 @@ app.get( "/", async ( req, res ) => {
 } );
 
 app.post( "/api/notion/check", async ( req, res ) => {
-    // const notionClient = new NotionClient(db, req.body.notion);
-    const notionClient = new NotionClient(db, env.NOTION_TOKEN);
+    //const notionToken = req.body.notion;
+    const notionToken = env.NOTION_TOKEN;
+    //const moodleUrl = req.body.moodle;
+    const moodleUrl = env.MOODLE_URL;
 
-    const check = await notionClient.checkToken();
-    const objects = check ? (await notionClient.getObjects()).map((object) => {
-        const newObject = object;
-        newObject.title = object.title ? object.title : "UNTITLED";
-        return newObject;
-    }) : null;
-
-    ical.async.fromURL(env.MOODLE_URL, {}, (error, data) => {
-    // ical.async.fromURL(req.body.moodle, {}, (error, data) => {
-        if (error) {
-            console.log(error);
-            res.json({check, objects});
-        }
-        else
-            res.json({
-                check,
-                objects,
-                events: MoodleHelper.convertCalendar(data)
+    let check: boolean = false;
+    let objects: NotionCtrl.NotionObject[];
+    let events: MoodleCtrl.MoodleEvent[];
+    notion.checkToken(notionToken).then(async (result) => {
+        check = result;
+        if (check) {
+            objects = await notion.getObjects(notionToken);
+            objects = objects.map((object) => {
+                const newObject = object;
+                newObject.title = object.title ? object.title : "UNTITLED";
+                return newObject;
             });
+
+            events = await MoodleCtrl.getEvents(moodleUrl);
+        }
+    })
+    .catch((err) => console.error(err))
+    .finally(() => {
+        res.json({
+            check: check,
+            objects: objects,
+            events: events
+        });
     });
 } );
 
 // Start database
-const db = new Database();
+const db = new DatabaseCtrl();
+const notion = new NotionCtrl(db);
+const telegram = new TelegramCtrl(db, env.TELEGRAM_TOKEN);
 
 // Start the express server
 app.listen( port, () => {
-    console.log( `server started at http://localhost:${ port }` );
+    console.log( `Server started at http://localhost:${ port }` );
 } );
 
-const nc = new NotionClient(db, env.NOTION_TOKEN);
+// const nc = new NotionCtrl(db, env.NOTION_TOKEN);
 // nc.getObjects().then(console.log);
 // nc.getDatabases().then((databases) => {console.log(databases)});
 // nc.getPages().then((pages) => {console.log(pages)});
-const bot = new TelegramBot(env.TELEGRAM_TOKEN, {polling: true});
-bot.onText(/^\/start/, (msg) => {
-    //TODO: lookup chatid in database
-    bot.sendMessage(
-        msg.chat.id, 
-        `Hello there ${msg.from.first_name}!\nPlease send me your <b>notion token</b> so I can link this channel.`, 
-        {parse_mode: "HTML"});
-});

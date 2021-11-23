@@ -1,19 +1,19 @@
-import ical from "node-ical";
-import https from "https";
-import { makeConsoleLogger } from "@notionhq/client/build/src/logging";
+import ical from 'node-ical';
 
-interface MoodleEvent {
-    id: string;
-    categories: string[];
-    summary: string;
-    description: string;
-    start: Date;
-    end: Date;
+namespace MoodleCtrl {
+    export interface MoodleEvent {
+        id: string;
+        categories: string[];
+        summary: string;
+        description: string;
+        start: Date;
+        end: Date;
+    }
 }
 
-export class MoodleHelper {
-    static convertCalendar(events: ical.CalendarResponse): MoodleEvent[] {
-        const result: MoodleEvent[] = [];
+class MoodleCtrl {
+    static convertCalendar(events: ical.CalendarResponse): MoodleCtrl.MoodleEvent[] {
+        const result: MoodleCtrl.MoodleEvent[] = [];
 
         for (const id of Object.keys(events)) {
             const event = events[id];
@@ -39,4 +39,10 @@ export class MoodleHelper {
 
         return result;
     }
+
+    static async getEvents(url: string) {
+        return ical.async.fromURL(url).then(MoodleCtrl.convertCalendar);
+    }
 }
+
+export default MoodleCtrl;
