@@ -41,6 +41,11 @@ class DatabaseCtrl {
     hasTelegramChatId(chatId: number): boolean {
         return this.db.prepare('SELECT chat_id FROM users WHERE chat_id = ?').get(chatId) !== undefined;
     }
+
+    updateTelegramCharId(chatId: number, notionToken: string): boolean {
+        const result = this.db.prepare('UPDATE users SET chat_id = ? WHERE notion_token = ?').run(chatId, notionToken);
+        return result.changes && result.changes > 0;
+    }
 }
 
 export default DatabaseCtrl;

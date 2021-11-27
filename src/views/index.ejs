@@ -25,12 +25,12 @@
         <div id="notion_token_field" class="input-field">
             <div class="row col s12 l12">
                 <div class="col m12 l6 input-field">
-                    <input id="notion_token" type="text" class="validate" placeholder="secret_asd2381SDF23a2tz8dykdeF1dfF21198ssAWeecD883">
+                    <input id="notion_token" type="text" class="validate" oninput="tokensChange();" onchange="tokensChange();" placeholder="secret_asd2381SDF23a2tz8dykdeF1dfF21198ssAWeecD883">
                     <label for="notion_token">Notion Internal Integration Token</label>
                     <a href="https://www.notion.so/my-integrations/internal/" target="blank">Notion Developer Site</a>
                 </div>
                 <div class="col m12 l6 input-field">
-                    <input id="moodle_calendar_url" type="text" class="validate" placeholder="https://moodle.hpi.de/calendar/export_execute.php?userid=12345&authtoken=adj81z4tuht29o87w2ow3rgajkn&preset_what=user&preset_time=custom">
+                    <input id="moodle_calendar_url" type="text" class="validate" oninput="tokensChange();" onchange="tokensChange();" placeholder="https://moodle.hpi.de/calendar/export_execute.php?userid=12345&authtoken=adj81z4tuht29o87w2ow3rgajkn&preset_what=user&preset_time=custom">
                     <label for="moodle_calendar_url">Moodle Calendar URL</label>
                     <a href="https://moodle.hpi.de/calendar/export.php?" target="blank">HPI Moodle</a>
                 </div>
@@ -112,6 +112,9 @@
             return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
 
+        let notionToken;
+        let moodle_url;
+
         let notionObjects;
         function checkToken() {
             $('#notion_token_field').find("input, button").attr("disabled", true);
@@ -129,6 +132,9 @@
             $('#error').css("display", "none");
             $('#submit').attr("disabled", true);
 
+            notionToken = undefined;
+            moodle_url = undefined;
+            tokensChange();
             $.ajax({
                 url: 'api/notion/check',
                 type: 'POST',
@@ -142,7 +148,9 @@
                             notionObjects = data.objects;
                             loadNotionObjects();
                             loadMoodleCalendar(data.events);
-                            $('#settings').css("display", "block");
+                            notionToken = data.notion;
+                            moodle_url = data.moodle;
+                            tokensChange();
                         } catch (e) {
                             console.log(e);
                             $('#error').text("There was an unexpected error!");
@@ -163,6 +171,14 @@
                     $('#notion_token_btn').html("Check");
                 }
             });
+        }
+
+        function tokensChange() {
+            if ($('#notion_token').val() !== notionToken || 
+                    $('#moodle_calendar_url').val() !== moodle_url)
+                $('#settings').css("display", "none");
+            else
+                $('#settings').css("display", "block");
         }
 
         function buildPath(object) {
@@ -226,12 +242,14 @@
         }
 
         function checkSubmitReady() {
-            if ($("#notion_database_select").val() && $("#notion_page_select").val()) {
-                console.log("REmoved");
+            if ($("#notion_database_select").val() && $("#notion_page_select").val())
                 $("#submit").removeAttr("disabled");
-            } else {
+            else
                 $("#submit").attr("disabled", true);
-            }
+        }
+
+        function submit() {
+
         }
     </script>
 </body>

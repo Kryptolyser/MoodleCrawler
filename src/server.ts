@@ -60,6 +60,8 @@ app.post( "/api/notion/check", async ( req, res ) => {
     .catch((err) => console.error(err))
     .finally(() => {
         res.json({
+            notion: notionToken,
+            moodle: moodleUrl,
             check: check,
             objects: objects,
             events: events
@@ -70,7 +72,7 @@ app.post( "/api/notion/check", async ( req, res ) => {
 // Start database
 const db = new DatabaseCtrl();
 const notion = new NotionCtrl(db);
-const telegram = new TelegramCtrl(db, env.TELEGRAM_TOKEN);
+const telegram = new TelegramCtrl(db, env.TELEGRAM_TOKEN || "", env.WEBSERVER_URL || "");
 
 // Start the express server
 app.listen( port, () => {

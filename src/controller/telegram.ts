@@ -4,10 +4,12 @@ import DatabaseCtrl from "./database";
 class TelegramCtrl {
     db: DatabaseCtrl;
     bot: TelegramBot;
+    webserverUrl: string;
 
-    constructor(db: DatabaseCtrl, token: string) {
+    constructor(db: DatabaseCtrl, token: string, webserverUrl: string) {
         this.db = db;
         this.bot = new TelegramBot(token, {polling: true});
+        this.webserverUrl = webserverUrl;
 
         this.bot.onText(/^[^\/].*/, (msg) => this.anyMsg(msg));
         this.bot.onText(/^\/start/, (msg) => this.startCmd(msg));
@@ -18,11 +20,22 @@ class TelegramCtrl {
         if (this.db.hasTelegramChatId(msg.chat.id))
             return true;
         else {
-            this.bot.sendMessage(
-                msg.chat.id,
-                `Please send me your notion token to unlock my features.`,
-                {parse_mode: "HTML"}
-            );
+            const token = msg.text.replace(/^\/start /, "");
+            const success = this.db.updateTelegramCharId(msg.chat.id, token);
+            if (success) {
+                this.bot.sendMessage(
+                    msg.chat.id,
+                    `Your notion token was successfully linked with this chat! To get started take a look at the commands with /help.`,
+                    {parse_mode: "HTML"}
+                );
+            }
+            else {
+                this.bot.sendMessage(
+                    msg.chat.id,
+                    `Sorry, but I couldn't find that notion token in my database. Have you already registered it at ${this.webserverUrl}?`,
+                    {parse_mode: "HTML"}
+                );
+            }
             return false;
         }
     }
@@ -38,10 +51,8 @@ class TelegramCtrl {
     }
 
     private startCmd(msg: TelegramBot.Message) {
-        if (msg.text.match(/^\/start (.+)/)) {
-            const token = msg.text.replace(/^\/start /, "");
-            console.log(token);
-        }
+        if (msg.text.match(/^\/start (.+)/))
+            this.checkChatId(msg);
         else {
             this.bot.sendMessage(
                 msg.chat.id,
