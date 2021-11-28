@@ -14,6 +14,13 @@ class TelegramCtrl {
         this.bot.onText(/^[^\/].*/, (msg) => this.anyMsg(msg));
         this.bot.onText(/^\/start/, (msg) => this.startCmd(msg));
         this.bot.onText(/^\/help/, (msg) => this.helpCmd(msg));
+
+        this.bot.on('callback_query', (callbackQuery) => {
+            this.bot.editMessageReplyMarkup({inline_keyboard: []}, {chat_id: callbackQuery.message.chat.id, message_id: callbackQuery.message.message_id});
+            this.bot.answerCallbackQuery(callbackQuery.id, {
+                text: 'This is a test'
+            });
+        });
     }
 
     private checkChatId(msg: TelegramBot.Message) {
@@ -64,9 +71,20 @@ class TelegramCtrl {
 
     private helpCmd(msg: TelegramBot.Message) {
         this.bot.getMyCommands().then((commands) => {
+            // this.bot.sendMessage(
+            //     msg.chat.id,
+            //     `<b>available commands:</b>\n${commands.map((cmd) => `/${cmd.command} - ${cmd.description}`).join("\n")}`,
+            //     {parse_mode: "html", reply_to_message_id: msg.message_id, reply_markup: {
+            //         inline_keyboard: 
+            //         [
+            //             [{text: 'testing', callback_data: 'testing'}],
+            //             [{text: 'testing', callback_data: 'testing1'}],
+            //         ]
+            //     }}
+            // );
             this.bot.sendMessage(
                 msg.chat.id,
-                `<b>Available commands:</b>\n${commands.map((cmd) => `/${cmd.command} - ${cmd.description}`).join("\n")}`,
+                `<b>available commands:</b>\n${commands.map((cmd) => `/${cmd.command} - ${cmd.description}`).join("\n")}`,
                 {parse_mode: "HTML"}
             );
         });

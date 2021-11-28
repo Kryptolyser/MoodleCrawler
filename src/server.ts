@@ -29,6 +29,7 @@ app.set( "view engine", "ejs" );
 
 // Define a routes
 app.use(favicon(__dirname + '/public/images/favicon.png'));
+app.use(express.static(__dirname + '/public'));
 
 app.get( "/", async ( req, res ) => {
     // render the index template
@@ -67,7 +68,14 @@ app.post( "/api/notion/check", async ( req, res ) => {
             events: events
         });
     });
-} );
+});
+
+app.post( "/api/notion/update", async ( req, res ) => {
+    console.log(req.body);
+    //res.status(400).send();
+
+    res.render("update", {url: "https://google.de"});
+});
 
 // Start database
 const db = new DatabaseCtrl();
